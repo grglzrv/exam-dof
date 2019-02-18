@@ -1,0 +1,75 @@
+def label = "docker-${UUID.randomUUID().toString()}"
+
+podTemplate(label: label, yaml: """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: docker
+    image: docker:1.11
+    command: ['cat']
+    tty: true
+    volumeMounts:
+    - name: dockersock
+      mountPath: /var/run/docker.sock
+    - name: docker-config
+      mountPath: /root/.docker
+  - name: kubectl
+    image: lachlanevenson/k8s-kubectl:v1.8.0
+    command: [cat]
+    tty: true
+    volumeMounts:
+    - name: dockersock
+      mountPath: /var/run/docker.sock
+    - name: docker-config
+      mountPath: /root/.docker
+  volumes:
+  - name: dockersock
+    hostPath:
+      path: /var/run/docker.sock
+  - name: docker-config
+    configMap:
+      name: docker-config
+"""
+  ) {
+
+  def imagetag = new Date().format('yyyyMMdd.HHmmss')
+  def image1 = "lazarovg/php-host:${imagetag}"
+  def image2 = "lazarovg/nginx-host:${imagetag}"
+  def image3 = "lazarovg/redis-host:${imagetag}"
+  
+  node(label) 
+  {
+    stage('Build Docker image') 
+    {
+      git 'https://github.com/grglzrv/exam-dof.git'
+      container('docker') 
+      {
+        sh "docker build -t ${image1} ./php"
+        sh "docker build -t ${image2} ./nginx"
+		sh "docker build -t ${image3} ./redis"
+      }
+    }
+    stage ("Push")
+    {
+      container('docker') 
+      {
+        sh "docker push ${image1}"
+        sh "docker push ${image2}"
+		sh "docker push ${image3}"
+      }
+    }
+    stage ("Apply the changes with kubectl")
+    {
+        container('kubectl')
+        {
+            sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i php.yml"
+			sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i nginx.yml"
+			sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i redis.yml"
+ 	        sh "kubectl apply -f php.yml"
+			sh "kubectl apply -f nginx.yml"
+			sh "kubectl apply -f redis.yml"
+        }
+    }
+  }
+}
