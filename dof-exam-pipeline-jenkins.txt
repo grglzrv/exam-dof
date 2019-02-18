@@ -47,7 +47,7 @@ spec:
       {
         sh "docker build -t ${image1} ./php"
         sh "docker build -t ${image2} ./nginx"
-		sh "docker build -t ${image3} ./redis"
+	sh "docker build -t ${image3} ./redis"
       }
     }
     stage ("Push")
@@ -56,20 +56,20 @@ spec:
       {
         sh "docker push ${image1}"
         sh "docker push ${image2}"
-		sh "docker push ${image3}"
+	sh "docker push ${image3}"
       }
     }
     stage ("Apply the changes with kubectl")
     {
-        container('kubectl')
-        {
-            sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i php.yml"
-			sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i nginx.yml"
-			sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i redis.yml"
- 	        sh "kubectl apply -f php.yml"
-			sh "kubectl apply -f nginx.yml"
-			sh "kubectl apply -f redis.yml"
-        }
+      container('kubectl')
+      {
+        sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i php.yml"
+	sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i nginx.yml"
+	sh "sed 's/%IMAGE-PLACEHOLDER%/${imagetag}/g' -i redis.yml"
+ 	sh "kubectl apply -f php.yml"
+	sh "kubectl apply -f nginx.yml"
+	sh "kubectl apply -f redis.yml"
+      }
     }
   }
 }
